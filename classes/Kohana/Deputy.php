@@ -1,14 +1,14 @@
 <?php defined('SYSPATH') or die('No direct script access.');
 /**
  * Deputy ACL
- * 
- * By default, all resources are denied permission. When access is checked for a given resource, 
- * ACL iterates through each role checking for both allow and deny. Ambiguity is handled by 
- * returning the result of a role with the most explicit definition. Checking for allowed across 
- * the roles will continue if a role returns false. If allow at anytime returns true, the result 
- * will stop with true. If deny at anytime returns true, the result of the check will stop with 
+ *
+ * By default, all resources are denied permission. When access is checked for a given resource,
+ * ACL iterates through each role checking for both allow and deny. Ambiguity is handled by
+ * returning the result of a role with the most explicit definition. Checking for allowed across
+ * the roles will continue if a role returns false. If allow at anytime returns true, the result
+ * will stop with true. If deny at anytime returns true, the result of the check will stop with
  * false.
- * 
+ *
  * @package		Deputy
  * @category	Base
  * @author		Micheal Morgan <micheal@morgan.ly>
@@ -16,42 +16,42 @@
  * @license		MIT
  */
 class Kohana_Deputy
-{	
+{
 	/**
 	 * Wildcard
-	 * 
+	 *
 	 * @var		string
 	 */
 	const WILDCARD = '*';
 
 	/**
 	 * Delimiter
-	 * 
+	 *
 	 * @var		string
 	 */
 	const DELIMITER = '/';
-	
+
 	/**
 	 * Singleton Pattern
-	 * 
+	 *
 	 * @access	public
 	 * @return	Deputy
 	 */
 	public static function instance(array $config = array())
 	{
 		static $instance;
-		
+
 		if ($instance === NULL)
 		{
 			$instance = new Deputy($config);
 		}
-		
+
 		return $instance;
-	}	
-	
+	}
+
 	/**
 	 * Helper for html link
-	 * 
+	 *
 	 * @access	public
 	 * @param	string
 	 * @param	bool
@@ -61,34 +61,34 @@ class Kohana_Deputy
 	{
 		return Deputy::instance()->html_link($uri, $attributes, $check);
 	}
-	
+
 	/**
 	 * Parent resource
-	 * 
+	 *
 	 * @access	public
 	 * @var		Deputy_Resource
 	 */
 	protected $_resources;
-	
+
 	/**
 	 * Roles
-	 * 
+	 *
 	 * @access	protected
 	 * @var		array
 	 */
 	protected $_roles = array();
-	
+
 	/**
 	 * Configuration
-	 * 
+	 *
 	 * @access	public
 	 * @var		array
 	 */
 	protected $_config = array();
-	
+
 	/**
 	 * Initialize Account
-	 * 
+	 *
 	 * @access	public
 	 * @return	void
 	 */
@@ -99,14 +99,14 @@ class Kohana_Deputy
 
 		// Handle configuration
 		$this->_config = Arr::merge(Kohana::$config->load('deputy')->as_array(), $config);
-		
+
 		// Setup Deputy
 		$this->_setup();
 	}
-	
+
 	/**
 	 * Setup
-	 * 
+	 *
 	 * @access	protected
 	 * @return	void
 	 */
@@ -114,15 +114,15 @@ class Kohana_Deputy
 	{
 		if ($this->_config['autoload'])
 		{
-			$this->set_resources($this->_config['resources']);	
+			$this->set_resources($this->_config['resources']);
 		}
 	}
 
 	/**
 	 * Set role
-	 * 
-	 * If Deputy_Role passed, it always sets 
-	 * 
+	 *
+	 * If Deputy_Role passed, it always sets
+	 *
 	 * @access	public
 	 * @param	string
 	 * @param	mixed	array|Deputy_Role
@@ -137,14 +137,14 @@ class Kohana_Deputy
 		else
 		{
 			$acl_role = ($role instanceof Deputy_Role) ? $role : Deputy_Role::factory();
-			
+
 			$this->_roles[$name] = $acl_role;
 		}
-		
+
 		if (is_array($role))
 		{
 			$allow = $deny = array();
-			
+
 			if (isset($role['allow']) OR isset($role['deny']))
 			{
 				$allow = (isset($role['allow'])) ? $role['allow'] : array();
@@ -154,17 +154,17 @@ class Kohana_Deputy
 			{
 				$allow = $role;
 			}
-			
+
 			$acl_role->allow_many($allow);
 			$acl_role->deny_many($deny);
 		}
-		
+
 		return $this;
 	}
 
 	/**
 	 * Get role
-	 * 
+	 *
 	 * @access	public
 	 * @return	Deputy_Role
 	 */
@@ -175,10 +175,10 @@ class Kohana_Deputy
 		else
 			return $default;
 	}
-	
+
 	/**
 	 * Get roles
-	 * 
+	 *
 	 * @access	public
 	 * @return	array
 	 */
@@ -186,10 +186,10 @@ class Kohana_Deputy
 	{
 		return $this->_roles;
 	}
-	
+
 	/**
 	 * Set Roles
-	 * 
+	 *
 	 * @access	public
 	 * @return	$this
 	 */
@@ -199,13 +199,13 @@ class Kohana_Deputy
 		{
 			$this->set_role($name, $role);
 		}
-		
+
 		return $this;
 	}
-	
+
 	/**
 	 * Get Resources
-	 * 
+	 *
 	 * @access	public
 	 * @return	array
 	 */
@@ -213,30 +213,30 @@ class Kohana_Deputy
 	{
 		return $this->_resources;
 	}
-	
+
 	/**
 	 * Is Allowed
-	 * 
+	 *
 	 * @access	public
 	 * @return	bool
 	 */
 	public function allowed($uri)
-	{		
+	{
+		$is_allowed = FALSE;
 		foreach ($this->_roles as $role)
 		{
-			if ($role->is_denied($uri))
-				return FALSE;
-			
 			if ($role->is_allowed($uri))
-				return TRUE;
+				$is_allowed = TRUE;
+
+			if ($role->is_denied($uri))
+				$is_allowed = FALSE;
 		}
-		
-		return FALSE;
+		return $is_allowed;
 	}
-	
+
 	/**
 	 * Set Resource
-	 * 
+	 *
 	 * @access	public
 	 * @param	string
 	 * @param	Deputy_Resource|NULL
@@ -244,19 +244,19 @@ class Kohana_Deputy
 	 */
 	public function set($uri, Deputy_Resource $resource = NULL)
 	{
-		$resource = ($resource) ? $resource : Deputy_Resource::factory(array('uri' => $uri)); 
-		
+		$resource = ($resource) ? $resource : Deputy_Resource::factory(array('uri' => $uri));
+
 		$segments = explode(Deputy::DELIMITER, $uri);
 		$count = count($segments);
-		
+
 		$pointer = $this->_resources;
-		
+
 		$base = array();
-		
+
 		foreach ($segments as $index => $segment)
 		{
 			$base[] = $segment;
-			
+
 			if ($index + 1 == $count)
 			{
 				$pointer->set($segment, $resource);
@@ -264,24 +264,24 @@ class Kohana_Deputy
 			else
 			{
 				$parent = $pointer->get($segment);
-				
+
 				if ( ! $parent)
 				{
 					$parent = Deputy_Resource::factory(array('uri' => implode(Deputy::DELIMITER, $base)));
-					
+
 					$pointer->set($segment, $parent);
 				}
-				
+
 				$pointer = $parent;
 			}
 		}
-		
+
 		return $this;
 	}
-	
+
 	/**
 	 * Add Resources using array conventions
-	 * 
+	 *
 	 * @access	public
 	 * @return	$this
 	 */
@@ -292,7 +292,7 @@ class Kohana_Deputy
 			if ( ! $value instanceof Deputy_Resource)
 			{
 				$config = array();
-				
+
 				if (is_int($key))
 				{
 					$config['uri'] = $value;
@@ -305,7 +305,7 @@ class Kohana_Deputy
 				else if (is_array($value))
 				{
 					$value['uri'] = $key;
-					
+
 					$config = $value;
 				}
 				else if (is_bool($value))
@@ -316,18 +316,18 @@ class Kohana_Deputy
 
 				$value = Deputy_Resource::factory($config);
 			}
-			
+
 			$uri = is_string($key) ? $key : $value->uri();
-			
+
 			$this->set($uri, $value);
 		}
-		
+
 		return $this;
-	}	
-	
+	}
+
 	/**
 	 * Traverse Resource tree for child based on URI structure "parent/child/child/child"
-	 * 
+	 *
 	 * @access	public
 	 * @param	string	URI of resource to retrieve.
 	 * @param	bool	Create resource if it does not exist.
@@ -340,20 +340,20 @@ class Kohana_Deputy
 		foreach (explode(Deputy::DELIMITER, $uri) as $segment)
 			if ( ! $resource = $resource->get($segment))
 				break;
-		
+
 		if ( ! $resource AND $create)
 		{
 			$this->set($uri);
-			
+
 			$resource = $this->get($uri, FALSE);
 		}
-		
+
 		return $resource;
 	}
-	
+
 	/**
 	 * Generate link
-	 * 
+	 *
 	 * @access	public
 	 * @param	string
 	 * @param	array
@@ -364,15 +364,15 @@ class Kohana_Deputy
 	{
 		if ($check AND ! $this->allowed($uri))
 			return NULL;
-			
+
 		$resource = $this->get($uri);
-		
+
 		return html::anchor($resource->get_uri(), $resource->get_title(), $attributes);
 	}
 
 	/**
 	 * Get HTML Tree
-	 * 
+	 *
 	 * @access	public
 	 * @param	Deputy_Resource|NULL
 	 * @return	array
@@ -380,25 +380,25 @@ class Kohana_Deputy
 	public function & html_list(Deputy_Resource $resources = NULL)
 	{
 		$resources = $resources ? $resources : $this->get_resources();
-		
+
 		$tree = array();
-		
+
 		foreach ($resources as $resource)
 		{
 			if ($resource->is_visible())
 			{
 				$key = html::anchor($resource->get_uri(), $resource->get_title());
 				$value = array();
-				
+
 				if (count($resource) > 0)
 				{
 					$value = $this->html_list($resource);
 				}
-				
+
 				$tree[$key] = $value;
 			}
 		}
-		
+
 		return $tree;
 	}
 }
